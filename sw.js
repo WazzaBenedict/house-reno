@@ -1,5 +1,5 @@
 // 離線快取：app 本體先用快取、背景更新；資料庫請求一律走網路。
-const VERSION = "reno-v1";
+const VERSION = "reno-v2";
 const SHELL = ["./", "index.html", "styles.css", "app.js", "config.js", "vendor/supabase.js", "manifest.webmanifest", "icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {
