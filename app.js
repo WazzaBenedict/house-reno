@@ -11,6 +11,9 @@ const LS = {
   del(k) { try { localStorage.removeItem("reno." + k); } catch { /* ignore */ } },
 };
 
+// 一鍵載入連結：#import=<金鑰>。金鑰只在連結裡，repo 裡的 seed.enc 是加密過的。
+(() => { const m = location.hash.match(/^#import=([A-Za-z0-9_-]{43})$/); if (m) { LS.set("importKey", m[1]); history.replaceState(null, "", location.pathname); } })();
+
 const TSTAT = ["尚未詢價", "待補圖", "詢價中", "已簽約", "施工中", "已驗收"];
 const PSTAT = ["未開始", "進行中", "完成"];
 const TABS = [
@@ -96,7 +99,28 @@ async function pull() {
   rows.forEach((r) => { seen.add(r.id); if (!S.dirty.has(r.id)) S.items.set(r.id, r); });
   [...S.items.keys()].forEach((id) => { if (!seen.has(id) && !S.dirty.has(id)) S.items.delete(id); });
   S.loaded = true; LS.set("loaded", true); S.err = null;
-  persist(); render(); flush();
+  persist(); render(); flush(); linkImport();
+}
+async function linkImport() {
+  const k = LS.get("importKey", null);
+  if (!k || !S.ready || !navigator.onLine || linkImport.busy) return;
+  linkImport.busy = true;
+  try {
+    const res = await fetch("seed.enc", { cache: "no-store" });
+    if (!res.ok) { toast("規劃資料還沒準備好，請一分鐘後再開一次連結"); return; }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const raw = Uint8Array.from(atob(k.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+    let rows;
+    try {
+      const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+      rows = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: buf.slice(0, 12) }, key, buf.slice(12)))).items;
+    } catch { LS.del("importKey"); toast("這條載入連結無效"); return; }
+    let n = 0;
+    rows.forEach((r, i) => { if (S.items.has(r.id)) return; S.items.set(r.id, { id: r.id, kind: r.kind, data: r.data, sort: r.sort == null ? i : r.sort, deleted: false, _v: ++ver }); S.dirty.add(r.id); n++; });
+    LS.del("importKey"); persist(); render(); flush();
+    toast(n ? "已載入 " + n + " 筆翻修規劃" : "翻修規劃已經載入過了");
+  } catch { toast("沒有載入成功，請再開一次連結"); }
+  finally { linkImport.busy = false; }
 }
 let channel = null;
 function listen() {

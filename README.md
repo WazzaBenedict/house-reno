@@ -17,8 +17,9 @@
 | `sw.js`、`manifest.webmanifest`、`icons/` | 離線快取和安裝到主畫面 |
 | `vendor/supabase.js` | Supabase 用戶端程式庫（2.45.4） |
 | `supabase/schema.sql` | 資料表和權限規則 |
+| `seed.enc` | 加密過的初始規劃資料，用屋主手上的一鍵載入連結才解得開 |
 
-翻修資料不在這個 repo 裡，只存在資料庫。
+翻修資料只存在資料庫。repo 裡的 `seed.enc` 是 AES-256-GCM 加密的初始資料，金鑰不在 repo 裡。
 
 ## 第一次設定
 
